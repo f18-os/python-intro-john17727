@@ -41,11 +41,17 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
                 fd = sys.stdout.fileno()
                 os.set_inheritable(fd, True)
                 break
+            elif isRedir == "<":
+                with open(args[count].decode(), "r") as inRedir:
+                    for line in inRedir:
+                        line = line.strip()
+                        newArgs.append(line)
+                break
             else:
                 #Stores the arguments before the redirection in a new list
                 newArgs.append(args[count - 1])
                 count += 1
-
+        
         
         for dir in re.split(":", os.environ['PATH']):
             program = "%s/%s" % (dir, args[0].decode())
