@@ -1,10 +1,10 @@
-#Collaborations
+# Collaborations
 
 Most useful code was transferred over from the demo programs.
 
-##Alan Uribe
+## Alan Uribe
 Inspired changes in the reading and writing of a pipe.
-###In child:
+### In child:
 Was using:
 ```python
 os.close(1)
@@ -16,7 +16,7 @@ os.close(r)
 fd = sys.stdout.fileno()
 os.dup2(w, fd)
 ```
-###In parent:
+### In parent:
 Was using:
 ```python
 os.close(0)

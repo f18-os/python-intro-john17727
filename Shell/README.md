@@ -3,7 +3,7 @@
 ## shell.py
 The program implements a shell that can do input and ouput redirects and a pipe. Mix and matching is not a feature and therefore buggy.
 
-###Output Redirect
+### Output Redirect
 Closes stdout and changes it to a user defined file.
 ```python
 os.close(1)
@@ -21,7 +21,7 @@ with open(args[count], "r") as inRedir:
         newArgs.append(line)
 ```
 
-###Pipe
+### Pipe
 Creates a pipe and makes it inheritable. Some code inspired by in a collaboration with Alan Uribe. See COLLABORATION.md under Alan Uribe.
 ```python
 r, w = os.pipe()
