@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+#! /usr/bin/env python3
 
-import os, sys, time, re
+import os, sys, time, re, fileinput
 
 #Telling the user what to type to exit
 print ("(Type Exit to quit.)")
@@ -18,11 +18,19 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
     isExit = isExit.lower()
     if isExit == "exit":
         sys.exit(1)
+    
+    sCommand = ""
     isPipe = False
-    for i in command:
-        if i == "|":
-            isPipe = True
-            r, w = os.pipe()
+    command = command.decode()
+    if "|" in command:
+        isPipe = True
+        command, sCommand = command.split("|")
+        command = command.strip()
+        sCommand = sCommand.strip()
+
+    r, w = os.pipe()
+    for f in (r, w):
+        os.set_inheritable(f, True)
     rc = os.fork()
 
     if rc < 0:
@@ -37,19 +45,21 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
         count = 1
         #Checks for redirection while keeping the arguments before the redirection
         for x in args:
-            isRedir = x.decode()
+            isRedir = x
             isRedir = isRedir[:2]
-            if isRedir == '|':
-                os.close(r)
-                sys.stdout = os.fdopen(w, "w")
+            if isPipe:
+                os.close(1)
+                os.dup(w)
+                for fd in (r, w):
+                    os.close(fd)
             elif isRedir == ">":
                 os.close(1)
-                sys.stdout = open(args[count].decode(), "w")
+                sys.stdout = open(args[count], "w")
                 fd = sys.stdout.fileno()
                 os.set_inheritable(fd, True)
                 break
             elif isRedir == "<":
-                with open(args[count].decode(), "r") as inRedir:
+                with open(args[count], "r") as inRedir:
                     for line in inRedir:
                         line = line.strip()
                         newArgs.append(line)
@@ -61,7 +71,7 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
         
         
         for dir in re.split(":", os.environ['PATH']):
-            program = "%s/%s" % (dir, args[0].decode())
+            program = "%s/%s" % (dir, args[0])
             try:
                 os.execve(program, newArgs, os.environ)
                 break
@@ -73,36 +83,18 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
 
     else:
         if isPipe:
-            os.close(w)
-            r = os.fdopen(r)
-            args = r.read()
-
             newArgs = []
-            count = 1
-            #Checks for redirection while keeping the arguments before the redirection
-            for x in args:
-                isRedir = x.decode()
-                isRedir = isRedir[:2]
-                if isRedir == ">":
-                    os.close(1)
-                    sys.stdout = open(args[count].decode(), "w")
-                    fd = sys.stdout.fileno()
-                    os.set_inheritable(fd, True)
-                    break
-                elif isRedir == "<":
-                    with open(args[count].decode(), "r") as inRedir:
-                        for line in inRedir:
-                            line = line.strip()
-                            newArgs.append(line)
-                    break
-                else:
-                    #Stores the arguments before the redirection in a new list
-                    newArgs.append(args[count - 1])
-                    count += 1
-        
-        
+            os.close(0)
+            os.dup(r)
+            for fd in (w, r):
+                os.close(fd)
+
+            for line in fileinput.input():
+                line = line.strip()
+                newArgs.append(line)
+
             for dir in re.split(":", os.environ['PATH']):
-                program = "%s/%s" % (dir, args[0].decode())
+                program = "%s/%s" % (dir, sCommand)
                 try:
                     os.execve(program, newArgs, os.environ)
                     break
