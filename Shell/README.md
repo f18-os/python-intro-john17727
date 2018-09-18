@@ -12,7 +12,7 @@ fd = sys.stdout.fileno()
 os.set_inheritable(fd, True)
 ```
 
-###Input Redirect
+### Input Redirect
 Opens the file to be read and saves the contents as arguments in a list.
 ```python
 with open(args[count], "r") as inRedir:
