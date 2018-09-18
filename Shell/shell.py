@@ -19,6 +19,7 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
     if isExit == "exit":
         sys.exit(1)
     
+    #Sets flags to later check command contains a pipe
     sCommand = ""
     isPipe = False
     command = command.decode()
@@ -28,6 +29,7 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
         command = command.strip()
         sCommand = sCommand.strip()
 
+    #Create the pipe
     r, w = os.pipe()
     for f in (r, w):
         os.set_inheritable(f, True)
@@ -41,18 +43,19 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
         #Splits the command by spaces
         args = command.split()
 
+        #Close stdout and duplicate to fd. Collaboration with Alan Uribe.
+        if isPipe:
+            os.close(r)
+            fd = sys.stdout.fileno()
+            os.dup2(w, fd)
+
         newArgs = []
         count = 1
         #Checks for redirection while keeping the arguments before the redirection
         for x in args:
             isRedir = x
             isRedir = isRedir[:2]
-            if isPipe:
-                os.close(1)
-                os.dup(w)
-                for fd in (r, w):
-                    os.close(fd)
-            elif isRedir == ">":
+            if isRedir == ">":
                 os.close(1)
                 sys.stdout = open(args[count], "w")
                 fd = sys.stdout.fileno()
@@ -74,6 +77,8 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
             program = "%s/%s" % (dir, args[0])
             try:
                 os.execve(program, newArgs, os.environ)
+                for fd in (r, w):
+                    os.close(fd)
                 break
             except FileNotFoundError:
                 pass
@@ -84,10 +89,10 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
     else:
         if isPipe:
             newArgs = []
-            os.close(0)
-            os.dup(r)
-            for fd in (w, r):
-                os.close(fd)
+            #Close stdin and duplicate with fd. Collaboration with Alan Uribe.
+            os.close(w)
+            fd = sys.stdin.fileno()
+            os.dup2(r, fd)
 
             for line in fileinput.input():
                 line = line.strip()
@@ -97,6 +102,8 @@ while True: #keeps the program alive as long as user doesn't explicitly exit
                 program = "%s/%s" % (dir, sCommand)
                 try:
                     os.execve(program, newArgs, os.environ)
+                    for f in (w, r):
+                        os.close(f)
                     break
                 except FileNotFoundError:
                     pass
